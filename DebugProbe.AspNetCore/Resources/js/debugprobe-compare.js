@@ -31,29 +31,53 @@ function setCompareResult(html) {
 }
 
 function renderCompare(result) {
+
+    const environmentRows = [
+        { field: 'Environment', local: result.environment?.local, remote: result.environment?.remote },
+        { field: 'Culture', local: result.culture?.local, remote: result.culture?.remote }
+    ];
+    var environmentRowsChangedCount = getChangedCount(environmentRows);
+
+    const overviewRows = [
+        { field: 'Method', local: result.method?.local, remote: result.method?.remote },
+        { field: 'Path', local: result.path?.local, remote: result.path?.remote },
+        { field: 'Status', local: result.status?.local, remote: result.status?.remote },
+        { field: 'Request Time', local: result.requestTime?.local, remote: result.requestTime?.remote }
+    ];
+    var overviewRowsChangedCount = getChangedCount(overviewRows);
+
+    const localRequestBodyJson = result.requestBody?.local || ''
+    const remoteRequestBodyJson = result.requestBody?.remote || ''
+    const requestComparison = compareJsonBodies(localRequestBodyJson, remoteRequestBodyJson);
+
+    const localResponseBodyJson = result.responseBody?.local || ''
+    const remoteResponseBodyJson = result.responseBody?.remote || ''
+    const responseComparison = compareJsonBodies(localResponseBodyJson, remoteResponseBodyJson);
+
     return [
         renderAccordionSection(
             'Environment',
-            renderSectionRows([
-                { field: 'Environment', local: result.environment?.local, remote: result.environment?.remote },
-                { field: 'Culture', local: result.culture?.local, remote: result.culture?.remote }
-            ])
+            renderSectionRows(environmentRows),
+            environmentRowsChangedCount > 0 ? true : false,
+            environmentRowsChangedCount
         ),
-
         renderAccordionSection(
             'Overview',
-            renderSectionRows([
-                { field: 'Method', local: result.method?.local, remote: result.method?.remote },
-                { field: 'Path', local: result.path?.local, remote: result.path?.remote },
-                { field: 'Status', local: result.status?.local, remote: result.status?.remote },
-                { field: 'Request Time', local: result.requestTime?.local, remote: result.requestTime?.remote }
-            ]),
-            true // expanded by default
+            renderSectionRows(overviewRows),
+            overviewRowsChangedCount > 0 ? true : false,
+            overviewRowsChangedCount
         ),
-
-        renderAccordionSection('Request', renderSideBySideJson(result.requestBody)),
-
-        renderAccordionSection('Response', renderSideBySideJson(result.responseBody)
+        renderAccordionSection(
+            'Request',
+            renderSideBySideJson(requestComparison, localRequestBodyJson, remoteRequestBodyJson),
+            requestComparison.changes > 0 ? true : false,
+            requestComparison.changes
+        ),
+        renderAccordionSection(
+            'Response',
+            renderSideBySideJson(responseComparison, localResponseBodyJson, remoteResponseBodyJson),
+            responseComparison.changes > 0 ? true : false,
+            responseComparison.changes
         )
     ].join('');
 }
@@ -82,31 +106,34 @@ function renderSectionRows(rows) {
         </table>
     `;
 }
-function renderSideBySideJson(data) {
-    const localJson = data?.local || '';
-    const remoteJson = data?.remote || '';
-    const comparison = compareJsonBodies(localJson, remoteJson);
 
+function renderSideBySideJson(comparison, localJson, remoteJson) {
     return `<div class="json-compare">
         <div>
             <b>Local</b>
+            ${comparison.localError ? `<div class="json-error">${comparison.localError}</div>` : '' }
             ${renderAlignedJson(comparison.local, localJson)}
         </div>
+
         <div>
             <b>Remote</b>
+            ${comparison.remoteError ? `<div class="json-error">${comparison.remoteError}</div>` : '' }
             ${renderAlignedJson(comparison.remote, remoteJson)}
         </div>
     </div>`;
 }
 
-function renderAccordionSection(title, content, expanded = false) {
+function renderAccordionSection(title, content, expanded = false, changes = 0) {
     return `
         <div class="accordion-section">
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 <div class="accordion-title">${escapeHtml(title)}</div>
-
                 <div class="accordion-meta">
-                    ${expanded ? '-' : '+'}
+                    ${changes > 0 ? `<span class="diff-badge">${changes}</span>` : '' }
+
+                    <span class="accordion-toggle">
+                        ${expanded ? '-' : '+'}
+                    </span>
                 </div>
             </div>
 
@@ -119,20 +146,43 @@ function renderAccordionSection(title, content, expanded = false) {
 
 function toggleAccordion(header) {
     const body = header.nextElementSibling;
-    const meta = header.querySelector('.accordion-meta');
+    const toggle = header.querySelector('.accordion-toggle');
 
     body.classList.toggle('open');
 
-    meta.textContent =
+    toggle.textContent =
         body.classList.contains('open') ? '-' : '+';
+}
+
+function getChangedCount(rows) {
+    return rows.filter(x => x.local !== x.remote).length;
 }
 
 function compareJsonBodies(localJson, remoteJson) {
     const local = parseJson(localJson);
     const remote = parseJson(remoteJson);
 
-    if (!local.ok && !remote.ok) {
-        return emptyComparison();
+    if (!local.ok || !remote.ok) {
+        return {
+            local: (local.raw || '(empty)')
+                .split('\n')
+                .map(x => ({
+                    text: x,
+                    state: !local.ok ? 'invalid' : ''
+                })),
+
+            remote: (remote.raw || '(empty)')
+                .split('\n')
+                .map(x => ({
+                    text: x,
+                    state: !remote.ok ? 'invalid' : ''
+                })),
+
+            localError: !local.ok ? 'Failed To Parse JSON' : null,
+            remoteError: !remote.ok ? 'Failed To Parse JSON' : null,
+
+            changes: 1
+        };
     }
 
     const rows = createRows();
@@ -142,14 +192,23 @@ function compareJsonBodies(localJson, remoteJson) {
 }
 
 function parseJson(json) {
-    if (!json || json.trim() === '' || json === '{}') {
-        return { ok: false, value: null };
+    if (!json || json.trim() === '') {
+        return { ok: false, value: null, raw: '' };
     }
 
     try {
-        return { ok: true, value: JSON.parse(json) };
-    } catch {
-        return { ok: false, value: null };
+        return {
+            ok: true,
+            value: JSON.parse(json),
+            raw: json
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            value: null,
+            raw: json,
+            error: error.message
+        };
     }
 }
 
@@ -161,7 +220,7 @@ function emptyComparison() {
 }
 
 function createRows() {
-    return { local: [], remote: [] };
+    return { local: [], remote: [], changes: 0 };
 }
 
 function pushPair(rows, localText, remoteText, state = '') {
@@ -170,6 +229,8 @@ function pushPair(rows, localText, remoteText, state = '') {
 }
 
 function pushPresence(rows, value, side, depth, trailingComma) {
+    rows.changes++;
+
     const isLocal = side === 'local';
     const lines = stringifyLines(value, depth, trailingComma);
 
@@ -200,7 +261,13 @@ function appendValue(rows, localValue, remoteValue, hasLocal, hasRemote, depth, 
         return;
     }
 
-    const state = jsonEquals(localValue, remoteValue) ? '' : 'changed';
+    const changed = !jsonEquals(localValue, remoteValue);
+
+    if (changed) {
+        rows.changes++;
+    }
+
+    const state = changed ? 'changed' : '';
     pushPair(rows, primitiveLine(localValue, depth, trailingComma), primitiveLine(remoteValue, depth, trailingComma), state);
 }
 
@@ -246,7 +313,13 @@ function appendProperty(rows, key, localObject, remoteObject, depth, trailingCom
         return;
     }
 
-    const state = jsonEquals(localValue, remoteValue) ? '' : 'changed';
+    const changed = !jsonEquals(localValue, remoteValue);
+
+    if (changed) {
+        rows.changes++;
+    }
+
+    const state = changed ? 'changed' : '';
     pushPair(rows, propertyLine(key, localValue, depth, trailingComma), propertyLine(key, remoteValue, depth, trailingComma), state);
 }
 
@@ -398,6 +471,8 @@ function pushNamedPresence(rows, key, value, side, depth, trailingComma) {
 }
 
 function appendChangedBlocks(rows, localValue, remoteValue, depth, trailingComma) {
+    rows.changes++;
+
     const localLines = stringifyLines(localValue, depth, trailingComma);
     const remoteLines = stringifyLines(remoteValue, depth, trailingComma);
     const count = Math.max(localLines.length, remoteLines.length);
@@ -409,6 +484,8 @@ function appendChangedBlocks(rows, localValue, remoteValue, depth, trailingComma
 }
 
 function appendChangedNamedBlocks(rows, key, localValue, remoteValue, depth, trailingComma) {
+    rows.changes++;
+
     const localLines = stringifyLines(localValue, depth, trailingComma, `"${key}": `);
     const remoteLines = stringifyLines(remoteValue, depth, trailingComma, `"${key}": `);
     const count = Math.max(localLines.length, remoteLines.length);
