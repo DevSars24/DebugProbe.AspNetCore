@@ -44,9 +44,16 @@ public class DebugProbeMiddleware
 
         var started = Stopwatch.StartNew();
 
+        var exception = false;
+
         try
         {
             await _next(context);
+        }
+        catch
+        {
+            exception = true;
+            throw;
         }
         finally
         {
@@ -55,13 +62,15 @@ public class DebugProbeMiddleware
             ms.Position = 0;
             var responseBody = await new StreamReader(ms).ReadToEndAsync();
             ms.Position = 0;
-            await ms.CopyToAsync(originalBody);
 
+            await ms.CopyToAsync(originalBody);
             context.Response.Body = originalBody;
 
             var shortDatePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
             var index = shortDatePattern.LastIndexOf('y');
             var dataFormat = index >= 0 ? shortDatePattern[..(index + 1)] : shortDatePattern;
+
+            var statusCode = exception && context.Response.StatusCode == 200 ? 500 : context.Response.StatusCode;
 
             store.Add(new DebugEntry
             {
@@ -80,7 +89,7 @@ public class DebugProbeMiddleware
                 Method = context.Request.Method,
                 Path = context.Request.Path,
                 Query = context.Request.QueryString.ToString(),
-                StatusCode = context.Response.StatusCode,
+                StatusCode = statusCode,
                 RequestTimeUtc = DateTime.UtcNow,
                 DurationMs = started.ElapsedMilliseconds,
                 RequestSize = Encoding.UTF8.GetByteCount(requestBody),
