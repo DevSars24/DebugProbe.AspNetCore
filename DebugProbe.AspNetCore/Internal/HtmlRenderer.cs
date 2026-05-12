@@ -80,9 +80,15 @@ internal static class HtmlRenderer
             .Replace("{{dateFormat}}", e.DateFormat ?? "")
             .Replace("{{assemblyVersion}}", Encode(e.AssemblyVersion))
 
-            .Replace("{{requestUrl}}", Encode(string.IsNullOrEmpty(x.RequestUrl) ? "(empty)" : x.RequestUrl))
-            .Replace("{{request}}", Encode(string.IsNullOrEmpty(req) ? "(empty)" : req))
-            .Replace("{{response}}", Encode(string.IsNullOrEmpty(res) ? "(empty)" : res))
+            .Replace("{{requestUrl}}", Encode(string.IsNullOrEmpty(x.RequestUrl) ? "" : x.RequestUrl))
+            .Replace("{{requestType}}", GetPayloadType(req))
+            .Replace("{{requestTypeClass}}", GetPayloadTypeClass(req))
+            .Replace("{{request}}", Encode(string.IsNullOrEmpty(req) ? "" : req))
+
+            .Replace("{{responseType}}", GetPayloadType(res))
+            .Replace("{{responseTypeClass}}", GetPayloadTypeClass(res))
+            .Replace("{{response}}", Encode(string.IsNullOrEmpty(res) ? "" : res))
+
             .Replace("{{headers}}", headers);
 
         return BuildLayout(content);
@@ -91,5 +97,25 @@ internal static class HtmlRenderer
     private static string Encode(string? value)
     {
         return WebUtility.HtmlEncode(value ?? "");
+    }
+
+    private static string GetPayloadType(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Empty";
+        }
+
+        return JsonUtils.IsValidJson(value) ? "JSON" : "Plain Text";
+    }
+
+    private static string GetPayloadTypeClass(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "payload-empty";
+        }
+
+        return JsonUtils.IsValidJson(value) ? "payload-json" : "payload-text";
     }
 }

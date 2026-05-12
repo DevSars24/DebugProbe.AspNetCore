@@ -20,7 +20,7 @@
                 <span>TraceId</span>
                 <button class="trace-id-button"
                         onclick="navigator.clipboard.writeText('{{traceId}}')">
-                   {{traceId}}
+                    {{traceId}}
                 </button>
             </div>
 
@@ -92,19 +92,46 @@
 
     <h3>Request URL</h3>
     <div class="code-block">
-        <button class="copy-btn" onclick="copyText(this)">Copy</button>
+        <div class="code-block-header">
+            <span class="code-badge payload-url">
+                URL
+            </span>
+
+            <button class="copy-btn" onclick="copyText(this)">
+                Copy
+            </button>
+        </div>
+
         <pre>{{requestUrl}}</pre>
     </div>
 
     <h3>Request Body</h3>
     <div class="code-block">
-        <button class="copy-btn" onclick="copyText(this)">Copy</button>
+        <div class="code-block-header">
+            <span class="code-badge {{requestTypeClass}}">
+                {{requestType}}
+            </span>
+
+            <button class="copy-btn" onclick="copyText(this)">
+                Copy
+            </button>
+        </div>
+
         <pre>{{request}}</pre>
     </div>
 
     <h3>Response Body</h3>
     <div class="code-block">
-        <button class="copy-btn" onclick="copyText(this)">Copy</button>
+        <div class="code-block-header">
+            <span class="code-badge {{responseTypeClass}}">
+                {{responseType}}
+            </span>
+
+            <button class="copy-btn" onclick="copyText(this)">
+                Copy
+            </button>
+        </div>
+
         <pre>{{response}}</pre>
     </div>
 

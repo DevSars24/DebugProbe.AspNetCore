@@ -161,6 +161,7 @@ pre {
 }
 
     .code-block pre {
+        min-height: 18px;
         margin: 0;
     }
 
@@ -186,6 +187,40 @@ pre {
     background: rgba(231, 76, 60, 0.12);
     color: #ff8a8a;
     border: 1px solid rgba(231, 76, 60, 0.25);
+}
+
+.code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.code-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
+
+.payload-json {
+    background: #183d24;
+    color: #6ddf8b;
+}
+
+.payload-text {
+    background: #4a3112;
+    color: #ffb84d;
+}
+
+.payload-url {
+    background: #1d3557;
+    color: #7cc7ff;
+}
+
+.payload-empty {
+    background: #444;
+    color: #ddd;
 }
 
 /* =========================
@@ -245,9 +280,6 @@ pre {
 }
 
 .copy-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
     padding: 4px 8px;
 }
 
