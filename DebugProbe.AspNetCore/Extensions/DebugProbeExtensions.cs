@@ -143,13 +143,16 @@ public static class DebugProbeExtensions
                 return item is null ? Results.NotFound() : Results.Json(item);
             }).ExcludeFromDescription();
 
-            webApp.MapGet("/debug/compare.js", () =>
-                Results.Text(EmbeddedResources.CompareJs, "application/javascript")
-            ).ExcludeFromDescription();
 
-            webApp.MapGet("/debug/ui.js", () =>
-                Results.Text(EmbeddedResources.UiJs, "application/javascript")
-            ).ExcludeFromDescription();
+            webApp.MapGet("/debug/js/{file}", (string file) =>
+            {
+                if (!EmbeddedResources.JavaScript.TryGetValue(file, out var content))
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Text(content, "application/javascript");
+            }).ExcludeFromDescription();
 
             webApp.MapPost("/debug/clear", (DebugEntryStore store) =>
             {
