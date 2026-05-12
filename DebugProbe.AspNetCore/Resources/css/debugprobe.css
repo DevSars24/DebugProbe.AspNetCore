@@ -218,6 +218,13 @@ pre {
     font-size: 12px;
 }
 
+.compare-pane-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
 /* =========================
    Badges
 ========================= */
@@ -268,12 +275,8 @@ pre {
 }
 
 .diff-badge {
-    min-width: 22px;
-    height: 22px;
-    background: #e74c3c;
-    color: #fff;
-    font-size: 12px;
-    font-weight: bold;
+    background: #4a1717;
+    color: #ff8a8a;
 }
 
 /* =========================
