@@ -11,8 +11,7 @@
     setCompareResult('<b style="color:orange">Comparing...</b>');
 
     try {
-        const remoteUrl = `${base.replace(/\/$/, '')}/debug/json/${remoteId}`;
-        const res = await fetch(`/debug/compare/${id}?url=${encodeURIComponent(remoteUrl)}`);
+        const res = await fetch(`/debug/compare/${id}?baseUrl=${encodeURIComponent(base)}&remoteTraceId=${encodeURIComponent(remoteId)}`);
 
         if (!res.ok) {
             const text = await res.json();

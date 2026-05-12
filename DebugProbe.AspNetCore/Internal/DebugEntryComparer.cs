@@ -19,12 +19,6 @@ internal static class DebugEntryComparer
         if (a.StatusCode != b.StatusCode)
             AddDiff(diffs, "Status", a.StatusCode, b.StatusCode, "meta");
 
-        if (a.Environment != b.Environment)
-            AddDiff(diffs, "Environment", a.Environment, b.Environment, "meta");
-
-        if (a.Culture != b.Culture)
-            AddDiff(diffs, "Culture", a.Culture, b.Culture, "meta");
-
         CompareBody(a.RequestBody, b.RequestBody, RequestBodyPath, diffs);
         CompareBody(a.ResponseBody, b.ResponseBody, ResponseBodyPath, diffs);
 
