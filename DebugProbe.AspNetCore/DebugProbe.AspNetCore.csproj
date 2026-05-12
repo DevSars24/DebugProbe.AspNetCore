@@ -36,8 +36,9 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\**\*.html" />
 		<EmbeddedResource Include="Resources\**\*.css" />
-		<EmbeddedResource Include="Resources\js\debugprobe-compare.js" />
-		<EmbeddedResource Include="Resources\js\debugprobe-ui.js" />
+		<EmbeddedResource Include="Resources\js\debugprobe_compare_engine.js" />
+		<EmbeddedResource Include="Resources\js\debugprobe_compare_renderer.js" />
+		<EmbeddedResource Include="Resources\js\debugprobe_ui.js" />
 		<EmbeddedResource Include="Assets\logo-full.PNG" />
 		<EmbeddedResource Include="Assets\favicon.ico" />
 	</ItemGroup>
@@ -45,8 +46,11 @@
 	<ItemGroup>
 		<None Remove="Resources\**\*.html" />
 		<None Remove="Resources\**\*.css" />
-		<None Remove="Resources\js\debugprobe-compare.js" />
-		<None Remove="Resources\js\debugprobe-ui.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Resources\js\debugprobe_compare_engine.js" />
+	  <None Remove="Resources\js\debugprobe_compare_renderer.js" />
 	</ItemGroup>
 
 	<ItemGroup>

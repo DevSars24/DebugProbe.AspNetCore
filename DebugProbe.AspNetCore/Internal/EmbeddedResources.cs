@@ -7,10 +7,20 @@
 internal static class EmbeddedResources
 {
     public static readonly string Css = ResourceLoader.LoadCss("debugprobe.css");
+
     public static readonly string Layout = ResourceLoader.LoadHtml("_shared.layout.html");
+
     public static readonly string Index = ResourceLoader.LoadHtml("index.html");
+
     public static readonly string Details = ResourceLoader.LoadHtml("details.html");
-    public static readonly string CompareJs = ResourceLoader.LoadJs("debugprobe-compare.js");
-    public static readonly string UiJs = ResourceLoader.LoadJs("debugprobe-ui.js");
+
+    public static readonly Dictionary<string, string> JavaScript = new()
+    {
+        ["debugprobe-compare-renderer.js"] = ResourceLoader.LoadJs("debugprobe_compare_renderer.js"),
+
+        ["debugprobe-compare-engine.js"] = ResourceLoader.LoadJs("debugprobe_compare_engine.js"),
+
+        ["debugprobe-ui.js"] = ResourceLoader.LoadJs("debugprobe_ui.js")
+    };
 }
 
