@@ -39,7 +39,7 @@ internal static class HtmlRenderer
         return BuildLayout(EmbeddedResources.Index.Replace("{{rows}}", rows));
     }
 
-    public static string RenderDetailsPage(DebugEntry x, string req, string res)
+    public static string RenderDetailsPage(DebugEntry x, DebugEnvironment e, string req, string res)
     {
         var headers = string.Join("", x.Headers.Select(h =>
             $"<tr><td>{Encode(h.Key)}</td><td>{Encode(h.Value)}</td></tr>"));
@@ -71,14 +71,14 @@ internal static class HtmlRenderer
             .Replace("{{requestSize}}", x.RequestSize.ToString())
             .Replace("{{responseSize}}", x.ResponseSize.ToString())
 
-            .Replace("{{env}}", Encode(x.Environment))
-            .Replace("{{culture}}", Encode(x.Culture))
+            .Replace("{{env}}", Encode(e.Environment))
+            .Replace("{{culture}}", Encode(e.Culture))
 
-            .Replace("{{machineName}}", Encode(x.MachineName))
-            .Replace("{{timeZone}}", Encode(x.TimeZone))
-            .Replace("{{decimalSeparator}}", Encode(x.DecimalSeparator))
-            .Replace("{{dateFormat}}", x.DateFormat ?? "")
-            .Replace("{{assemblyVersion}}", Encode(x.AssemblyVersion))
+            .Replace("{{machineName}}", Encode(e.MachineName))
+            .Replace("{{timeZone}}", Encode(e.TimeZone))
+            .Replace("{{decimalSeparator}}", Encode(e.DecimalSeparator))
+            .Replace("{{dateFormat}}", e.DateFormat ?? "")
+            .Replace("{{assemblyVersion}}", Encode(e.AssemblyVersion))
 
             .Replace("{{requestUrl}}", Encode(string.IsNullOrEmpty(x.RequestUrl) ? "(empty)" : x.RequestUrl))
             .Replace("{{request}}", Encode(string.IsNullOrEmpty(req) ? "(empty)" : req))

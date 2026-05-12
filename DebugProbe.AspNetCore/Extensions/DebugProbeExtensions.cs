@@ -30,6 +30,7 @@ public static class DebugProbeExtensions
     public static IApplicationBuilder UseDebugProbe(this IApplicationBuilder app)
     {
         app.UseMiddleware<DebugProbeMiddleware>();
+        app.ApplicationServices.GetRequiredService<DebugEntryStore>();
 
         if (app is WebApplication webApp)
         {
@@ -59,57 +60,81 @@ public static class DebugProbeExtensions
                 var prettyRequest = JsonUtils.Format(item.RequestBody);
                 var prettyResponse = JsonUtils.Format(item.ResponseBody);
 
-                var html = HtmlRenderer.RenderDetailsPage(item, prettyRequest, prettyResponse);
+                var html = HtmlRenderer.RenderDetailsPage(item, store.Environment, prettyRequest, prettyResponse);
 
                 ctx.Response.ContentType = "text/html";
                 await ctx.Response.WriteAsync(html);
             }).ExcludeFromDescription();
 
-            webApp.MapGet("/debug/compare/{id}", async (string id, string url, DebugEntryStore store) =>
+            webApp.MapGet("/debug/compare/{id}", async (string id, string baseUrl, string remoteTraceId, DebugEntryStore store) =>
             {
-                var local = store.Get(id);
-                if (local is null)
+                var localEnvironment = store.Environment;
+                var localEntry = store.Get(id);
+                if (localEntry is null)
                 {
                     return Results.NotFound("Local trace not found");
                 }
 
-                DebugEntry? remote;
+
+                var normalizedBaseUrl = baseUrl.TrimEnd('/');
+
+                var remoteEnvironmentUrl =
+                    $"{normalizedBaseUrl}/debug/environment";
+
+                var remoteEntryUrl =
+                    $"{normalizedBaseUrl}/debug/json/{remoteTraceId}";
+
+                DebugEntry? remoteEntry;
+                DebugEnvironment? remoteEnvironment;
 
                 try
                 {
-                    remote = await Http.GetFromJsonAsync<DebugEntry>(url);
+                    remoteEnvironment = await Http.GetFromJsonAsync<DebugEnvironment>(remoteEnvironmentUrl);
+
+                    if (remoteEnvironment is null)
+                    {
+                        return Results.BadRequest("Failed to load remote environment");
+                    }
+
+                    remoteEntry = await Http.GetFromJsonAsync<DebugEntry>(remoteEntryUrl);
+
+                    if (remoteEntry is null)
+                    {
+                        return Results.NotFound("Remote trace not found");
+                    }
                 }
                 catch
                 {
                     return Results.BadRequest("Failed to reach remote server");
                 }
 
-                if (remote is null)
-                {
-                    return Results.NotFound("Remote trace not found");
-                }
-
-                var diff = DebugEntryComparer.Compare(local, remote);
+               
+                var diff = DebugEntryComparer.Compare(localEntry, remoteEntry);
 
                 return Results.Ok(new
                 {
-                    method = new { local = local.Method, remote = remote.Method },
-                    path = new { local = local.Path, remote = remote.Path },
-                    status = new { local = local.StatusCode, remote = remote.StatusCode },
+                    method = new { local = localEntry.Method, remote = remoteEntry.Method },
+                    path = new { local = localEntry.Path, remote = remoteEntry.Path },
+                    status = new { local = localEntry.StatusCode, remote = remoteEntry.StatusCode },
 
                     requestTime = new
                     {
-                        local = local.RequestTimeUtc.ToLocalTime().ToString("HH:mm:ss"),
-                        remote = remote.RequestTimeUtc.ToLocalTime().ToString("HH:mm:ss"),
+                        local = localEntry.RequestTimeUtc.ToLocalTime().ToString("HH:mm:ss"),
+                        remote = remoteEntry.RequestTimeUtc.ToLocalTime().ToString("HH:mm:ss"),
                     },
 
-                    environment = new { local = local.Environment, remote = remote.Environment },
-                    culture = new { local = local.Culture, remote = remote.Culture },
-                    requestBody = new { local = local.RequestBody ?? "", remote = remote.RequestBody ?? "" },
-                    responseBody = new { local = local.ResponseBody ?? "", remote = remote.ResponseBody ?? "" },
+                    environment = new { local = localEnvironment.Environment, remote = remoteEnvironment?.Environment ?? "" },
+                    culture = new { local = localEnvironment.Culture, remote = remoteEnvironment?.Culture ?? "" },
+                    requestBody = new { local = localEntry.RequestBody ?? "", remote = remoteEntry.RequestBody ?? "" },
+                    responseBody = new { local = localEntry.ResponseBody ?? "", remote = remoteEntry.ResponseBody ?? "" },
 
                     diffs = diff
                 });
+            }).ExcludeFromDescription();
+
+            webApp.MapGet("/debug/environment", (DebugEntryStore store) =>
+            {
+                return Results.Ok(store.Environment);
             }).ExcludeFromDescription();
 
             webApp.MapGet("/debug/json/{id}", (string id, DebugEntryStore store) =>

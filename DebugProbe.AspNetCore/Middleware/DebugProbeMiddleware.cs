@@ -1,13 +1,9 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
-using System.Reflection;
 using System.Text;
-using DebugProbe.AspNetCore.Internal;
 using DebugProbe.AspNetCore.Models;
 using DebugProbe.AspNetCore.Options;
 using DebugProbe.AspNetCore.Storage;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 
 namespace DebugProbe.AspNetCore.Middleware;
 
@@ -83,24 +79,11 @@ public class DebugProbeMiddleware
             await ms.CopyToAsync(originalBody);
             context.Response.Body = originalBody;
 
-            var shortDatePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
-            var index = shortDatePattern.LastIndexOf('y');
-            var dataFormat = index >= 0 ? shortDatePattern[..(index + 1)] : shortDatePattern;
-
             var statusCode = exception && context.Response.StatusCode == 200 ? 500 : context.Response.StatusCode;
 
             store.Add(new DebugEntry
             {
                 Id = Guid.NewGuid().ToString(),
-
-                // Environment
-                Environment = EnvironmentUtils.TryGetEnvironment(),
-                MachineName = Environment.MachineName,
-                AssemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-                TimeZone = TimeZoneInfo.Local.DisplayName,
-                Culture = CultureInfo.CurrentCulture.Name,
-                DecimalSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator,
-                DateFormat = dataFormat,
 
                 // Overview
                 Method = context.Request.Method,

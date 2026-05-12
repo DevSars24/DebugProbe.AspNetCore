@@ -19,17 +19,6 @@ public class DebugEntry
     public long ResponseSize { get; set; }
     public string ResponseBody { get; set; } = default!;
 
-    // Environment
-    public string Environment { get; set; } = default!;
-    public string Culture { get; set; } = default!;
-    public string? UiCulture { get; set; }
-
-    public string? MachineName { get; set; }
-    public string? AssemblyVersion { get; set; }
-    public string? TimeZone { get; set; }
-    public string? DecimalSeparator { get; set; }
-    public string? DateFormat { get; set; }
-
     // Headers
     public Dictionary<string, string> Headers { get; set; } = new();
 
