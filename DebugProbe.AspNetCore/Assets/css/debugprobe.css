@@ -278,6 +278,10 @@ pre {
     color: #ddd;
 }
 
+.payload-hidden {
+    display: none;
+}
+
 .diff-badge {
     background: #4a1717;
     color: #ff8a8a;

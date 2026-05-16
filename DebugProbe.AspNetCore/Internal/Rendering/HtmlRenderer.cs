@@ -114,6 +114,11 @@ internal static class HtmlRenderer
 
     private static string GetPayloadType(string value)
     {
+        if (IsCapturePlaceholder(value))
+        {
+            return string.Empty;
+        }
+
         if (string.IsNullOrWhiteSpace(value))
         {
             return "Empty";
@@ -129,6 +134,11 @@ internal static class HtmlRenderer
 
     private static string GetPayloadTypeClass(string value)
     {
+        if (IsCapturePlaceholder(value))
+        {
+            return "payload-hidden";
+        }
+
         if (string.IsNullOrWhiteSpace(value))
         {
             return "payload-empty";
@@ -140,6 +150,11 @@ internal static class HtmlRenderer
         }
 
         return LooksLikeJson(value) ? "payload-invalid-json" : "payload-text";
+    }
+
+    private static bool IsCapturePlaceholder(string value)
+    {
+        return string.Equals(value, "[Body too large]", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool LooksLikeJson(string value)
