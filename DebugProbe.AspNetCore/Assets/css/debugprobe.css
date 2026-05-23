@@ -646,7 +646,7 @@ tbody tr:last-child td {
 pre {
     overflow: auto;
     margin: 0;
-    padding: 12px 48px 12px 12px;
+    padding: 12px 84px 12px 12px;
     background: #1e1e1e;
     border-radius: 0 0 6px 6px;
     color: #dcdcdc;
@@ -840,9 +840,10 @@ pre {
 .copy-btn {
     position: absolute;
     top: 8px;
-    right: 8px;
+    right: 28px;
     padding: 4px 8px;
     font-size: 11px;
+    z-index: 1;
 }
 
     .copy-btn:hover,
