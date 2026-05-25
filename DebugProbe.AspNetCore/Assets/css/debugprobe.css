@@ -369,7 +369,13 @@ h4 {
     margin-top: 0;
 }
 
-.compare-open-tab {
+.compare-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.compare-icon-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -384,17 +390,17 @@ h4 {
     cursor: pointer;
 }
 
-.compare-open-tab:hover {
+.compare-icon-action:hover {
     background: #f9fafb;
     border-color: #d1d5db;
     color: #111827;
 }
 
-.compare-open-tab[hidden] {
+.compare-icon-action[hidden] {
     display: none;
 }
 
-.compare-open-tab svg {
+.compare-icon-action svg {
     width: 15px;
     height: 15px;
     stroke: currentColor;

@@ -10,7 +10,7 @@ window.runCompare = async function () {
     }
 
     setCompareResult('<div class="compare-message">Comparing...</div>');
-    setOpenCompareButtonVisible(false);
+    setCompareActionsVisible(false);
 
     try {
         const res = await fetch(`/debug/compare/${id}?baseUrl=${encodeURIComponent(base)}&remoteTraceId=${encodeURIComponent(remoteId)}`);
@@ -22,24 +22,50 @@ window.runCompare = async function () {
         }
 
         setCompareResult(renderCompare(await res.json()));
-        setOpenCompareButtonVisible(true);
+        setCompareActionsVisible(true);
     } catch (error) {
         setCompareResult(`<div class="compare-message compare-message-error">${escapeHtml(error.message || 'Compare failed')}</div>`);
     }
 };
 
 window.openCompareInNewTab = function () {
+    const url = getCompareShareUrl();
+
+    if (url) {
+        window.open(url, '_blank', 'noopener');
+    }
+};
+
+window.copyCompareShareLink = async function () {
+    const url = getCompareShareUrl();
+    const button = document.getElementById('copyCompareLink');
+
+    if (!url || !button) {
+        return;
+    }
+
+    await navigator.clipboard.writeText(url);
+
+    button.title = 'Copied!';
+    button.setAttribute('aria-label', 'Copied!');
+
+    window.setTimeout(() => {
+        button.title = 'Copy share link';
+        button.setAttribute('aria-label', 'Copy share link');
+    }, 1800);
+};
+
+function getCompareShareUrl() {
     const localTraceId = getLocalTraceId();
     const base = document.getElementById('baseUrl').value.trim();
     const traceId = document.getElementById('compareId').value.trim();
 
     if (!base || !traceId) {
-        return;
+        return '';
     }
 
-    const url = `/compare?baseUrl=${encodeURIComponent(base)}&traceId=${encodeURIComponent(traceId)}&localTraceId=${encodeURIComponent(localTraceId)}`;
-    window.open(url, '_blank', 'noopener');
-};
+    return `${window.location.origin}/compare?baseUrl=${encodeURIComponent(base)}&traceId=${encodeURIComponent(traceId)}&localTraceId=${encodeURIComponent(localTraceId)}`;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const baseInput = document.getElementById('baseUrl');
@@ -71,10 +97,18 @@ function getLocalTraceId() {
     return input?.value || window.location.pathname.split('/').pop();
 }
 
-function setOpenCompareButtonVisible(visible) {
-    const button = document.getElementById('openCompareTab');
-    if (button) {
-        button.hidden = !visible;
+function setCompareActionsVisible(visible) {
+    ['copyCompareLink', 'openCompareTab'].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.hidden = !visible;
+        }
+    });
+
+    const copyButton = document.getElementById('copyCompareLink');
+    if (copyButton) {
+        copyButton.title = 'Copy share link';
+        copyButton.setAttribute('aria-label', 'Copy share link');
     }
 }
 
