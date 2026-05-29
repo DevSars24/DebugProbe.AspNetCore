@@ -8,18 +8,22 @@
 		<NoWarn>1591</NoWarn>
 
 		<PackageId>DebugProbe.AspNetCore</PackageId>
-		<Version>1.5.0</Version>
+		<Version>1.6.0</Version>
 
 		<Authors>Georgi Hristov</Authors>
 
-		<Description>Inspect and debug HTTP requests and responses directly inside ASP.NET Core applications.</Description>
+		<Description>Inspect HTTP traffic and compare request/response traces across ASP.NET Core environments.</Description>
 
-		<PackageTags>aspnetcore;debugging;http;middleware;diagnostics;tracing;observability;api-debugging;developer-tools</PackageTags>
+		<PackageTags>aspnetcore;debugging;http;middleware;diagnostics;tracing;observability;api-debugging;developer-tools;trace-comparison;environment-comparison</PackageTags>
+
+		<PackageReleaseNotes>
+			Adds trace comparison across environments, improved DebugProbe dashboard workflows, and support for comparing request and response differences between captured API runs.
+		</PackageReleaseNotes>
 		
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 
-		<RepositoryUrl>https://github.com/georgidhristov/DebugProbe.AspNetCore</RepositoryUrl>
+		<RepositoryUrl>https://github.com/DebugProbe/DebugProbe.AspNetCore</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 
 		<PackageProjectUrl>https://debugprobe.dev</PackageProjectUrl>

@@ -2,12 +2,13 @@
 
 DebugProbe.AspNetCore is a lightweight ASP.NET Core debugging tool for inspecting HTTP traffic directly inside your application.
 
-It captures request and response data, exposes a local dashboard, and helps compare traces during API development without requiring a proxy, browser extension, or external SaaS service.
+It captures request and response data, exposes a local dashboard, and helps compare traces across environments so you can spot differences between local, staging, and other API runs.
 
 ## Links
 
 - Website: [debugprobe.dev](https://debugprobe.dev)
 - Documentation: [debugprobe.dev/docs](https://debugprobe.dev/docs)
+- Roadmap: [Roadmap.md](https://github.com/DebugProbe/DebugProbe.AspNetCore/blob/main/Roadmap.md)
 - Live demo: [demo.debugprobe.dev/debug](https://demo.debugprobe.dev/debug)
 - Demo API: [demo.debugprobe.dev/swagger](https://demo.debugprobe.dev/swagger)
 - NuGet: [DebugProbe.AspNetCore](https://www.nuget.org/packages/DebugProbe.AspNetCore)
@@ -66,6 +67,21 @@ app.UseDebugProbe();
 - Ignored path configuration for noisy or sensitive endpoints
 - Sensitive header masking
 - Outgoing `HttpClient` request tracing
+
+## Trace Compare
+
+DebugProbe can compare a local trace with a trace captured by another DebugProbe-enabled application.
+
+Typical workflow:
+
+1. Run both applications with DebugProbe enabled.
+2. Open the local dashboard at `/debug`.
+3. Open the trace you want to compare.
+4. Use the compare action and provide the remote application's base URL and trace ID.
+
+Compare is useful when checking differences between local and remote environments, repeated runs, or two versions of the same API flow.
+
+Dynamic values such as IDs, timestamps, tokens, and selected headers are normalized so the compare view focuses on meaningful request and response differences.
 
 ## Security Defaults
 
