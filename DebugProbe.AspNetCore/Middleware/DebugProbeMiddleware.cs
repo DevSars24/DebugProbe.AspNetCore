@@ -36,13 +36,6 @@ public class DebugProbeMiddleware
         "/server-status"
     ];
 
-    private static readonly HashSet<string> SensitiveHeaders = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Authorization",
-        "Cookie",
-        "Set-Cookie"
-    };
-
     private readonly RequestDelegate _next;
     private readonly DebugProbeOptions _options;
 
@@ -75,7 +68,7 @@ public class DebugProbeMiddleware
             return;
         }
 
-        var maxBodySize = _options.MaxBodyCaptureSizeKb * 1024;
+        var maxBodySize = _options.MaxBodyCaptureSizeBytes;
 
         var requestBody = await CaptureRequestBodyAsync(context, maxBodySize);
 
@@ -140,7 +133,7 @@ public class DebugProbeMiddleware
             entry.RequestHeaders =
                 context.Request.Headers.ToDictionary(
                     x => x.Key,
-                    x => SensitiveHeaders.Contains(x.Key) ? "[REDACTED]" : x.Value.ToString());
+                    x => HeaderUtils.RedactIfSensitive(x.Key, x.Value.ToString()));
 
             entry.RequestUrl =
                 $"{context.Request.Scheme}://{context.Request.Host}" +
@@ -150,10 +143,10 @@ public class DebugProbeMiddleware
 
             entry.ResponseBody = HttpContentUtils.Trim(responseBody, maxBodySize);
 
-            entry.ResponseHeaders = 
+            entry.ResponseHeaders =
                 context.Response.Headers.ToDictionary(
                     x => x.Key,
-                    x => SensitiveHeaders.Contains(x.Key) ? "[REDACTED]" : x.Value.ToString());
+                    x => HeaderUtils.RedactIfSensitive(x.Key, x.Value.ToString()));
 
             store.Add(entry);
         }
@@ -225,8 +218,6 @@ public class DebugProbeMiddleware
                string.Equals(request.Method, HttpMethods.Put, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(request.Method, HttpMethods.Patch, StringComparison.OrdinalIgnoreCase);
     }
-
-   
 
     private static async Task<byte[]> ReadAtMostAsync(Stream stream, int byteLimit)
     {

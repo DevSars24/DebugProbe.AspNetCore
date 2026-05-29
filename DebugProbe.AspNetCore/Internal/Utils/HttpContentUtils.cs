@@ -24,6 +24,6 @@ internal static class HttpContentUtils
             return value ?? string.Empty;
         }
 
-        return value.Length <= max? value : value.Substring(0, max);
+        return value.Length <= max ? value : value[..max];
     }
 }
