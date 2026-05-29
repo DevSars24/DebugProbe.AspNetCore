@@ -11,13 +11,6 @@ namespace DebugProbe.AspNetCore.Handlers;
 /// </summary>
 public class DebugProbeHttpClientHandler : DelegatingHandler
 {
-    private static readonly HashSet<string> SensitiveHeaders =
-    [
-        "Authorization",
-        "Cookie",
-        "Set-Cookie"
-    ];
-
     private readonly DebugProbeOptions _options;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -55,7 +48,7 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
     /// <summary>
     /// Captures outgoing request details and stores them in the active DebugProbe entry.
     /// </summary>
-    private async Task CaptureRequest(HttpRequestMessage request, HttpResponseMessage? response, Exception? exception,long durationMs)
+    private async Task CaptureRequest(HttpRequestMessage request, HttpResponseMessage? response, Exception? exception, long durationMs)
     {
         var context = _httpContextAccessor.HttpContext;
 
@@ -90,9 +83,9 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
 
             IsSuccessStatusCode = response?.IsSuccessStatusCode ?? false,
 
-            RequestHeaders = request.Headers.ToDictionary(x => x.Key, x => SensitiveHeaders.Contains(x.Key) ? "[REDACTED]" : string.Join(", ", x.Value)),
+            RequestHeaders = request.Headers.ToDictionary(x => x.Key, x => HeaderUtils.RedactIfSensitive(x.Key, string.Join(", ", x.Value))),
 
-            ResponseHeaders = response != null ? response.Headers.ToDictionary(x => x.Key, x => SensitiveHeaders.Contains(x.Key) ? "[REDACTED]" : string.Join(", ", x.Value)) : []
+            ResponseHeaders = response != null ? response.Headers.ToDictionary(x => x.Key, x => HeaderUtils.RedactIfSensitive(x.Key, string.Join(", ", x.Value))) : []
         };
 
         if (request.Content != null)
@@ -103,7 +96,7 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
             {
                 var body = await request.Content.ReadAsStringAsync();
 
-                outgoing.RequestBody = JsonUtils.Format(HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeKb * 1024));
+                outgoing.RequestBody = JsonUtils.Format(HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes));
             }
         }
 
@@ -115,7 +108,7 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
             {
                 var body = await response.Content.ReadAsStringAsync();
 
-                outgoing.ResponseBody = JsonUtils.Format(HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeKb * 1024));
+                outgoing.ResponseBody = JsonUtils.Format(HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes));
             }
         }
 

@@ -15,6 +15,8 @@ public class DebugProbeOptions
     /// </summary>
     public int MaxBodyCaptureSizeKb { get; set; } = 32;
 
+    internal int MaxBodyCaptureSizeBytes => MaxBodyCaptureSizeKb * 1024;
+
     /// <summary>
     /// Allows compare requests to local or private network targets.
     /// </summary>
