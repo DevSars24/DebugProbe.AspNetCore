@@ -50,19 +50,7 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
     /// </summary>
     private async Task CaptureRequest(HttpRequestMessage request, HttpResponseMessage? response, Exception? exception, long durationMs)
     {
-        var context = _httpContextAccessor.HttpContext;
-
-        if (context == null)
-        {
-            return;
-        }
-
-        if (!context.Items.TryGetValue("DebugProbeEntry", out var value))
-        {
-            return;
-        }
-
-        if (value is not DebugEntry entry)
+        if (!TryGetActiveEntry(out var entry))
         {
             return;
         }
@@ -88,34 +76,42 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
             ResponseHeaders = response != null ? response.Headers.ToDictionary(x => x.Key, x => RedactionUtils.RedactHeader(x.Key, string.Join(", ", x.Value), _options)) : []
         };
 
-        if (request.Content != null)
-        {
-            var contentType = request.Content.Headers.ContentType?.MediaType;
+        outgoing.RequestBody = await CaptureBodyAsync(request.Content);
 
-            if (HttpContentUtils.IsTextContent(contentType))
-            {
-                var body = await request.Content.ReadAsStringAsync();
-
-                outgoing.RequestBody = JsonUtils.Format(RedactionUtils.RedactJsonFields(
-                    HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes),
-                    _options));
-            }
-        }
-
-        if (response?.Content != null)
-        {
-            var contentType = response.Content.Headers.ContentType?.MediaType;
-
-            if (HttpContentUtils.IsTextContent(contentType))
-            {
-                var body = await response.Content.ReadAsStringAsync();
-
-                outgoing.ResponseBody = JsonUtils.Format(RedactionUtils.RedactJsonFields(
-                    HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes),
-                    _options));
-            }
-        }
+        outgoing.ResponseBody = await CaptureBodyAsync(response?.Content);
 
         entry.OutgoingRequests.Add(outgoing);
+    }
+
+    private bool TryGetActiveEntry(out DebugEntry entry)
+    {
+        entry = null!;
+
+        var context = _httpContextAccessor.HttpContext;
+
+        if (context == null ||
+            !context.Items.TryGetValue("DebugProbeEntry", out var value) ||
+            value is not DebugEntry activeEntry)
+        {
+            return false;
+        }
+
+        entry = activeEntry;
+        return true;
+    }
+
+    private async Task<string> CaptureBodyAsync(HttpContent? content)
+    {
+        if (content == null ||
+            !HttpContentUtils.IsTextContent(content.Headers.ContentType?.MediaType))
+        {
+            return string.Empty;
+        }
+
+        var body = await content.ReadAsStringAsync();
+
+        return JsonUtils.Format(RedactionUtils.RedactJsonFields(
+            HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes),
+            _options));
     }
 }

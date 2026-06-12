@@ -57,16 +57,7 @@ public class DebugProbeMiddleware
     /// </summary>
     public async Task Invoke(HttpContext context, DebugEntryStore store)
     {
-        var path = context.Request.Path.Value ?? string.Empty;
-
-        var ignorePaths = DefaultIgnorePaths
-            .Concat(_options.IgnorePaths)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        var ignored = ignorePaths.Any(x =>
-            path.StartsWith(x, StringComparison.OrdinalIgnoreCase));
-
-        if (ignored)
+        if (IsIgnoredPath(context.Request.Path))
         {
             await _next(context);
             return;
@@ -116,7 +107,9 @@ public class DebugProbeMiddleware
 
             var statusCode = exception && context.Response.StatusCode == 200 ? 500 : context.Response.StatusCode;
 
-            var responseBody = exception ? HttpContentUtils.Trim(exceptionResponseBody, maxBodySize) : CaptureResponseBody(context, responseCapture, maxBodySize);
+            var responseBody = exception
+                ? HttpContentUtils.Trim(exceptionResponseBody, maxBodySize)
+                : CaptureResponseBody(context, responseCapture, maxBodySize);
 
             entry.Method = context.Request.Method;
 
@@ -160,6 +153,16 @@ public class DebugProbeMiddleware
 
             store.Add(entry);
         }
+    }
+
+    private bool IsIgnoredPath(PathString requestPath)
+    {
+        var path = requestPath.Value ?? string.Empty;
+
+        return DefaultIgnorePaths
+            .Concat(_options.IgnorePaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Any(ignorePath => path.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
     }
 
     private static async Task<string> CaptureRequestBodyAsync(HttpContext context, int maxBodySize)
