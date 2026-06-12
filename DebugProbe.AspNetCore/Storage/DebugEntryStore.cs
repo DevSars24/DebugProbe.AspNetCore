@@ -40,8 +40,11 @@ public class DebugEntryStore
     public void Add(DebugEntry entry)
     {
         _queue.Enqueue(entry);
+
         while (_queue.Count > _limit)
+        {
             _queue.TryDequeue(out _);
+        }
     }
 
     public List<DebugEntry> GetAll()
@@ -59,7 +62,7 @@ public class DebugEntryStore
         while (_queue.TryDequeue(out _)) { }
     }
 
-    private string GetDateFormat()
+    private static string GetDateFormat()
     {
         var shortDatePattern = CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern;
         var index = shortDatePattern.LastIndexOf('y');

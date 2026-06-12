@@ -98,7 +98,7 @@ internal static class RedactionUtils
                 continue;
             }
 
-            parts[i] = equalsIndex >= 0? $"{name}={options.RedactionText}" : $"{name}={options.RedactionText}";
+            parts[i] = $"{name}={options.RedactionText}";
         }
 
         return string.Join("&", parts);
