@@ -109,7 +109,7 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
         }
 
         if (_options.MaxBodyCaptureSizeBytes <= 0)
-            return null;
+            return string.Empty;
 
         var limit = _options.MaxBodyCaptureSizeBytes;
         var buffer = new byte[limit + 1];
