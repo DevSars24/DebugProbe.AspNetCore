@@ -8,7 +8,7 @@
 		<NoWarn>1591</NoWarn>
 
 		<PackageId>DebugProbe.AspNetCore</PackageId>
-		<Version>1.6.4</Version>
+		<Version>1.6.5</Version>
 
 		<Authors>Georgi Hristov</Authors>
 
@@ -17,7 +17,7 @@
 		<PackageTags>aspnetcore;debugging;http;middleware;diagnostics;tracing;observability;api-debugging;developer-tools;trace-comparison;environment-comparison</PackageTags>
 
 		<PackageReleaseNotes>
-			Fixes MaxEntries validation to prevent infinite loops caused by invalid configuration values. Improves ignore path matching to prevent false positives, ensuring paths such as /healthcare are no longer ignored when /health is configured. Includes internal refactoring and code cleanup to improve readability, reduce duplication, and enhance maintainability. Adds test coverage for configuration validation and ignore path matching scenarios.
+			Fixes response size tracking to report the actual number of bytes sent to the client instead of the captured body size. Adds validation for MaxBodyCaptureSizeKb to reject negative values while allowing 0 to disable body capture. Updates Microsoft.AspNetCore.TestHost to 8.0.28 and xunit.runner.visualstudio to 3.1.5.
 		</PackageReleaseNotes>
 		
 		<PackageIcon>icon.png</PackageIcon>
