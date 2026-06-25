@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using DebugProbe.AspNetCore.Internal.Utils;
 using DebugProbe.AspNetCore.Models;
 using DebugProbe.AspNetCore.Options;
@@ -108,10 +108,32 @@ public class DebugProbeHttpClientHandler : DelegatingHandler
             return string.Empty;
         }
 
-        var body = await content.ReadAsStringAsync();
+        // Buffer the content into memory so the original HttpContent remains readable
+        // for the actual outgoing HTTP request.
+        await content.LoadIntoBufferAsync();
 
-        return JsonUtils.Format(RedactionUtils.RedactJsonFields(
-            HttpContentUtils.Trim(body, _options.MaxBodyCaptureSizeBytes),
-            _options));
+        var limit = _options.MaxBodyCaptureSizeBytes;
+        var buffer = new byte[limit + 1];
+        var totalRead = 0;
+
+        using var stream = await content.ReadAsStreamAsync();
+
+        int bytesRead;
+        while (totalRead < buffer.Length &&
+               (bytesRead = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead))) > 0)
+        {
+            totalRead += bytesRead;
+        }
+
+        var truncated = totalRead > limit;
+        var encoding = System.Text.Encoding.UTF8;
+        var body = encoding.GetString(buffer, 0, Math.Min(totalRead, limit));
+
+        if (truncated)
+        {
+            body += "[truncated]";
+        }
+
+        return JsonUtils.Format(RedactionUtils.RedactJsonFields(body, _options));
     }
 }
