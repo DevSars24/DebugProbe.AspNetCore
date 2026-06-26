@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using DebugProbe.AspNetCore.Handlers;
 using DebugProbe.AspNetCore.Models;
@@ -95,6 +96,45 @@ public class DebugProbeHttpClientHandlerBodyTests
     }
 
     [Fact]
+    public async Task Capturing_streamed_response_body_does_not_consume_body_for_caller()
+    {
+        const int limitKb = 1;
+        var bodyText = new string('D', 2048);
+        var responseContent = new StreamContent(new NonSeekableMemoryStream(Encoding.UTF8.GetBytes(bodyText)));
+        responseContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain")
+        {
+            CharSet = Encoding.UTF8.WebName
+        };
+
+        var options = new DebugProbeOptions { MaxBodyCaptureSizeKb = limitKb };
+        var (client, entry) = BuildClient(options, responseContent);
+
+        using var response = await client.GetAsync("https://example.test/");
+
+        Assert.Equal(bodyText, await response.Content.ReadAsStringAsync());
+
+        var outgoing = Assert.Single(entry.OutgoingRequests);
+        Assert.EndsWith("[truncated]", outgoing.ResponseBody);
+    }
+
+    [Fact]
+    public async Task Captured_body_uses_content_type_charset()
+    {
+        const string bodyText = "Hello \u0100";
+        var responseContent = new StringContent(bodyText, Encoding.Unicode, "text/plain");
+
+        var options = new DebugProbeOptions { MaxBodyCaptureSizeKb = 1 };
+        var (client, entry) = BuildClient(options, responseContent);
+
+        using var response = await client.GetAsync("https://example.test/");
+
+        Assert.Equal(bodyText, await response.Content.ReadAsStringAsync());
+
+        var outgoing = Assert.Single(entry.OutgoingRequests);
+        Assert.Contains(bodyText, outgoing.ResponseBody);
+    }
+
+    [Fact]
     public async Task Null_content_returns_empty_string()
     {
         var options = new DebugProbeOptions();
@@ -131,5 +171,10 @@ public class DebugProbeHttpClientHandlerBodyTests
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(send(request));
+    }
+
+    private sealed class NonSeekableMemoryStream(byte[] buffer) : MemoryStream(buffer)
+    {
+        public override bool CanSeek => false;
     }
 }
