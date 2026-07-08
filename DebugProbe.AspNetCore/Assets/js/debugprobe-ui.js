@@ -10,6 +10,39 @@ function copyText(btn) {
     setTimeout(() => btn.innerText = "Copy", 1500);
 }
 
+function buildCurlCommand(method, url, headers, body, isWindows) {
+    function escapeSingleQuote(str) {
+        if (!str) return "";
+        return str.replace(/'/g, "'\\''");
+    }
+
+    function escapeDoubleQuote(str) {
+        if (!str) return "";
+        return str.replace(/"/g, '\\"').replace(/%/g, '%%');
+    }
+
+    const quote = isWindows ? '"' : "'";
+    const escape = isWindows ? escapeDoubleQuote : escapeSingleQuote;
+
+    let curlCmd = `curl -X ${method.toUpperCase()} ${quote}${escape(url)}${quote}`;
+
+    // Process headers
+    for (const [key, value] of Object.entries(headers)) {
+        if (!key || !value) continue;
+        const trimmedVal = value.trim();
+        if (trimmedVal === "[REDACTED]" || trimmedVal === "") continue;
+
+        curlCmd += ` -H ${quote}${escape(key)}: ${escape(value)}${quote}`;
+    }
+
+    // Process body (skip if empty or truncated indicator)
+    if (body && body.trim() !== "" && body !== "[Body too large]") {
+        curlCmd += ` -d ${quote}${escape(body)}${quote}`;
+    }
+
+    return curlCmd;
+}
+
 function copyAsCurl(btn) {
     const card = btn.closest(".trace-card");
     if (!card) return;
@@ -27,26 +60,10 @@ function copyAsCurl(btn) {
 
     const body = card.dataset.body;
 
-    function escapeSingleQuote(str) {
-        if (!str) return "";
-        return str.replace(/'/g, "'\\''");
-    }
+    const isWindows = (navigator.platform && navigator.platform.indexOf('Win') !== -1) || 
+                      (navigator.userAgent && navigator.userAgent.indexOf('Win') !== -1);
 
-    let curlCmd = `curl -X ${method.toUpperCase()} '${escapeSingleQuote(url)}'`;
-
-    // Process headers
-    for (const [key, value] of Object.entries(headers)) {
-        if (!key || !value) continue;
-        const trimmedVal = value.trim();
-        if (trimmedVal === "[REDACTED]" || trimmedVal === "") continue;
-
-        curlCmd += ` -H '${escapeSingleQuote(key)}: ${escapeSingleQuote(value)}'`;
-    }
-
-    // Process body (skip if empty or truncated indicator)
-    if (body && body.trim() !== "" && body !== "[Body too large]") {
-        curlCmd += ` -d '${escapeSingleQuote(body)}'`;
-    }
+    const curlCmd = buildCurlCommand(method, url, headers, body, isWindows);
 
     navigator.clipboard.writeText(curlCmd);
 
