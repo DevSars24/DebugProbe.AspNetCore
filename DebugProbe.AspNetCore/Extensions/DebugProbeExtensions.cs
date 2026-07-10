@@ -100,7 +100,7 @@ public static class DebugProbeExtensions
                         .OrderByDescending(x => x.Timestamp)
                         .ToList();
 
-                    var html = HtmlRenderer.RenderIndexPage(items);
+                    var html = HtmlRenderer.RenderIndexPage(items, options);
                     ctx.Response.ContentType = "text/html";
 
                     await ctx.Response.WriteAsync(html);
@@ -121,7 +121,7 @@ public static class DebugProbeExtensions
                     var prettyRequest = JsonUtils.Format(item.RequestBody);
                     var prettyResponse = JsonUtils.Format(item.ResponseBody);
 
-                    var html = HtmlRenderer.RenderDetailsPage(item, store.Environment, prettyRequest, prettyResponse);
+                    var html = HtmlRenderer.RenderDetailsPage(item, store.Environment, prettyRequest, prettyResponse, options);
                     ctx.Response.ContentType = "text/html";
 
                     await ctx.Response.WriteAsync(html);

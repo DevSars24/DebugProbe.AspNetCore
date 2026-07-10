@@ -1,6 +1,7 @@
 using DebugProbe.AspNetCore.Internal.Rendering;
 using DebugProbe.AspNetCore.Internal.Resources;
 using DebugProbe.AspNetCore.Models;
+using DebugProbe.AspNetCore.Options;
 
 namespace DebugProbe.AspNetCore.Tests.Rendering;
 
@@ -240,6 +241,111 @@ public class HtmlRendererTests
         // 3. Verify Response Card has no C# copy button (only 2 copy C# buttons in total should exist in HTML markup)
         var occurrences = (html.Length - html.Replace("class=\"csharp-copy-btn\"", "").Length) / "class=\"csharp-copy-btn\"".Length;
         Assert.Equal(2, occurrences);
+    }
+
+    [Fact]
+    public void Details_page_renders_markdown_copy_attributes_and_buttons()
+    {
+        var entry = CreateEntry();
+        entry.OutgoingRequests.Add(new DebugOutgoingRequest
+        {
+            Method = "PUT",
+            Url = "https://external-api.test/v1/update",
+            StatusCode = 200,
+            DurationMs = 120,
+            RequestBody = "{\"name\":\"John\"}",
+            RequestHeaders = new Dictionary<string, string> { ["Authorization"] = "Bearer token" }
+        });
+
+        var html = HtmlRenderer.RenderDetailsPage(
+            entry,
+            CreateEnvironment(),
+            "{\"request\":true}",
+            "{\"response\":true}");
+
+        // 1. Verify Incoming Request Card attributes and button
+        Assert.Contains("data-method=\"POST\"", html);
+        Assert.Contains("data-url=\"http://example.test/orders?id=10\"", html);
+        Assert.Contains("data-headers=\"{&quot;X-Test&quot;:&quot;yes&quot;}\"", html);
+        Assert.Contains("data-body=\"{&quot;request&quot;:true}\"", html);
+        Assert.Contains("class=\"markdown-copy-btn\"", html);
+
+        // 2. Verify Outgoing Request Card attributes and button
+        Assert.Contains("data-method=\"PUT\"", html);
+        Assert.Contains("data-url=\"https://external-api.test/v1/update\"", html);
+        Assert.Contains("data-headers=\"{&quot;Authorization&quot;:&quot;Bearer token&quot;}\"", html);
+        Assert.Contains("data-body=\"{&quot;name&quot;:&quot;John&quot;}\"", html);
+
+        // 3. Verify Response Card has no markdown copy button (only 2 copy markdown buttons in total should exist in HTML markup)
+        var occurrences = (html.Length - html.Replace("class=\"markdown-copy-btn\"", "").Length) / "class=\"markdown-copy-btn\"".Length;
+        Assert.Equal(2, occurrences);
+    }
+
+    [Fact]
+    public void Render_index_page_with_slow_badge()
+    {
+        var items = new List<DebugEntry>
+        {
+            new DebugEntry { Id = "1", Method = "GET", Path = "/1", DurationMs = 500, StatusCode = 200 },
+            new DebugEntry { Id = "2", Method = "GET", Path = "/2", DurationMs = 1500, StatusCode = 200 }
+        };
+
+        // Case 1: Threshold = 1000 (Default)
+        var htmlDefault = HtmlRenderer.RenderIndexPage(items, new DebugProbeOptions { SlowRequestThresholdMs = 1000 });
+        Assert.Contains("/debug/1", htmlDefault);
+        Assert.Contains("/debug/2", htmlDefault);
+        
+        Assert.Contains("500 ms</td>", htmlDefault);
+        Assert.Contains("1500 ms <span class=\"dbp-badge dbp-badge-slow\"", htmlDefault);
+
+        // Case 2: Threshold = 0 (disabled)
+        var htmlDisabled = HtmlRenderer.RenderIndexPage(items, new DebugProbeOptions { SlowRequestThresholdMs = 0 });
+        Assert.DoesNotContain("<span class=\"dbp-badge dbp-badge-slow\"", htmlDisabled);
+
+        // Case 3: Threshold = 2000
+        var htmlHigh = HtmlRenderer.RenderIndexPage(items, new DebugProbeOptions { SlowRequestThresholdMs = 2000 });
+        Assert.DoesNotContain("<span class=\"dbp-badge dbp-badge-slow\"", htmlHigh);
+    }
+
+    [Fact]
+    public void Render_details_page_with_slow_badge()
+    {
+        var entry = CreateEntry();
+        entry.DurationMs = 1200; // > 1000
+        entry.OutgoingRequests.Add(new DebugOutgoingRequest
+        {
+            Method = "GET",
+            Url = "https://external-api.test",
+            StatusCode = 200,
+            DurationMs = 1500, // > 1000
+            TimestampUtc = entry.Timestamp.UtcDateTime.AddMilliseconds(200),
+            IsSuccessStatusCode = true
+        });
+        entry.OutgoingRequests.Add(new DebugOutgoingRequest
+        {
+            Method = "GET",
+            Url = "https://external-api2.test",
+            StatusCode = 200,
+            DurationMs = 200, // < 1000
+            TimestampUtc = entry.Timestamp.UtcDateTime.AddMilliseconds(400),
+            IsSuccessStatusCode = true
+        });
+
+        // Case 1: Threshold = 1000
+        var html = HtmlRenderer.RenderDetailsPage(entry, CreateEnvironment(), "{}", "{}", new DebugProbeOptions { SlowRequestThresholdMs = 1000 });
+        
+        // Detail Header should have badge
+        Assert.Contains("1200 ms <span class=\"dbp-badge dbp-badge-slow\"", html);
+        
+        // Outgoing Request 1 (1500ms) should have badge in waterfall
+        Assert.Contains("1500 ms <span class=\"dbp-badge dbp-badge-slow\"", html);
+        
+        // Outgoing Request 2 (200ms) should NOT have badge in waterfall
+        Assert.Contains("200 ms</div>", html);
+
+        // Case 2: Threshold = 0
+        var htmlDisabled = HtmlRenderer.RenderDetailsPage(entry, CreateEnvironment(), "{}", "{}", new DebugProbeOptions { SlowRequestThresholdMs = 0 });
+        Assert.DoesNotContain("<span class=\"dbp-badge dbp-badge-slow\"", htmlDisabled);
     }
 
     private static DebugEntry CreateEntry()
