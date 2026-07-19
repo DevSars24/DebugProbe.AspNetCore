@@ -24,16 +24,89 @@ internal static class HtmlRenderer
             .Replace("{{env_block}}", envBlock);
     }
 
+    private static string NormalizePath(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return string.Empty;
+
+        var queryIndex = path.IndexOf('?');
+        var normalized = queryIndex >= 0 ? path[..queryIndex] : path;
+
+        if (normalized.Length > 1 && normalized.EndsWith('/'))
+        {
+            normalized = normalized.TrimEnd('/');
+        }
+
+        return normalized;
+    }
+
     public static string RenderIndexPage(List<DebugEntry> items, DebugProbeOptions? options = null)
     {
         options ??= new DebugProbeOptions();
         var slowRequestThresholdMs = options.SlowRequestThresholdMs;
+        var store = DebugEntryStore.Instance;
+
+        var routesWithDiffs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var routeDiffTooltips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (options.AutoEnvironmentDiff && items.Count > 0)
+        {
+            var groups = new Dictionary<string, Dictionary<string, DebugEntry>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in items)
+            {
+                var method = entry.Method ?? string.Empty;
+                var normalizedPath = NormalizePath(entry.Path);
+                var groupKey = $"{method}:{normalizedPath}";
+                var env = store?.GetEnvironment(entry)?.Environment ?? "Unknown";
+
+                if (!groups.TryGetValue(groupKey, out var envDict))
+                {
+                    envDict = new Dictionary<string, DebugEntry>(StringComparer.OrdinalIgnoreCase);
+                    groups[groupKey] = envDict;
+                }
+
+                if (!envDict.ContainsKey(env))
+                {
+                    envDict[env] = entry;
+                }
+            }
+
+            foreach (var kvp in groups)
+            {
+                var envDict = kvp.Value;
+                if (envDict.Count >= 2)
+                {
+                    var topTwo = envDict.Values.OrderByDescending(e => e.Timestamp).Take(2).ToList();
+                    var diffs = DebugProbe.AspNetCore.Internal.Compare.DebugEntryComparer.Compare(topTwo[0], topTwo[1]);
+                    if (diffs != null && diffs.Count > 0)
+                    {
+                        routesWithDiffs.Add(kvp.Key);
+                        var envNames = topTwo.Select(e => store?.GetEnvironment(e)?.Environment ?? "Unknown").Distinct();
+                        routeDiffTooltips[kvp.Key] = string.Join(", ", envNames);
+                    }
+                }
+            }
+        }
 
         var rows = string.Join("", items.Select(x =>
         {
             var pathWithQuery = string.IsNullOrEmpty(x.Query) ? x.Path : $"{x.Path}{x.Query}";
             var badge = RenderSlowBadge(TimeSpan.FromMilliseconds(x.DurationMs), options);
             var badgeHtml = string.IsNullOrEmpty(badge) ? "" : " " + badge;
+
+            var method = x.Method ?? string.Empty;
+            var normalizedPath = NormalizePath(x.Path);
+            var groupKey = $"{method}:{normalizedPath}";
+            var envDiffBadgeHtml = "";
+
+            if (options.AutoEnvironmentDiff && routesWithDiffs.Contains(groupKey))
+            {
+                if (routeDiffTooltips.TryGetValue(groupKey, out var envList))
+                {
+                    envDiffBadgeHtml = $@" <span class=""dbp-badge dbp-badge-envdiff"" title=""Payload differences detected between: {Encode(envList)}"">⚠ Env diff</span>";
+                }
+            }
 
             return $@"
         <tr data-url=""/debug/{Encode(x.Id)}""
@@ -43,7 +116,7 @@ internal static class HtmlRenderer
             class=""clickable-row"">
             <td>{x.Timestamp:HH:mm:ss}</td>
             <td><span class=""method-pill"">{Encode(x.Method)}</span></td>
-            <td class=""request-path""><span class=""request-path-value"" title=""{Encode(pathWithQuery)}"">{Encode(pathWithQuery)}</span></td>
+            <td class=""request-path""><span class=""request-path-value"" title=""{Encode(pathWithQuery)}"">{Encode(pathWithQuery)}</span>{envDiffBadgeHtml}</td>
             <td><span class=""status {GetStatusClass(x.StatusCode)}"">{x.StatusCode}</span></td>
             <td>{x.DurationMs} ms{badgeHtml}</td>
         </tr>";
@@ -65,7 +138,7 @@ internal static class HtmlRenderer
         var errorRate = totalRequests == 0 ? 0 : items.Count(x => x.StatusCode >= 400) * 100d / totalRequests;
 
         // Trend calculations
-        var store = DebugEntryStore.Instance;
+        store ??= DebugEntryStore.Instance;
         var now = DateTimeOffset.UtcNow;
         var limitTime = now.AddMinutes(-options.TrendLookbackMinutes);
         var midTime = now.AddMinutes(-options.TrendLookbackMinutes / 2.0);

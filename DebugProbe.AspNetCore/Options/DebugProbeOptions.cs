@@ -64,6 +64,12 @@ public class DebugProbeOptions
     public bool CaptureOutgoingHttpClientRequests { get; set; } = true;
 
     /// <summary>
+    /// Enables automatic comparison of trace payloads for the same endpoint across different environments.
+    /// Defaults to false.
+    /// </summary>
+    public bool AutoEnvironmentDiff { get; set; } = false;
+
+    /// <summary>
     /// Additional request paths to ignore.
     /// </summary>
     public string[] IgnorePaths { get; set; } = [];
