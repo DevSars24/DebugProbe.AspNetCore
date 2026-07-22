@@ -34,6 +34,7 @@ public class DebugEntryStore
     public DebugEnvironment Environment { get; }
 
     private readonly ConcurrentQueue<DebugEntry> _queue = new();
+    private readonly ConcurrentDictionary<string, DebugEnvironment> _entryEnvironments = new();
     private readonly int _limit;
 
     public DebugEntryStore(DebugProbeOptions options)
@@ -56,7 +57,16 @@ public class DebugEntryStore
 
     public void Add(DebugEntry entry)
     {
+        Add(entry, Environment);
+    }
+
+    public void Add(DebugEntry entry, DebugEnvironment environment)
+    {
         _queue.Enqueue(entry);
+        if (environment != null && entry.Id != null)
+        {
+            _entryEnvironments[entry.Id] = environment;
+        }
 
         if (TryParseException(entry.ResponseBody, out var type, out var message))
         {
@@ -85,8 +95,20 @@ public class DebugEntryStore
         while (_queue.Count > _limit)
         {
             // ExceptionGroups counts are a running tally and must NOT be decremented on MaxEntries eviction.
-            _queue.TryDequeue(out _);
+            if (_queue.TryDequeue(out var evicted) && evicted.Id != null)
+            {
+                _entryEnvironments.TryRemove(evicted.Id, out _);
+            }
         }
+    }
+
+    public DebugEnvironment GetEnvironment(DebugEntry entry)
+    {
+        if (entry.Id != null && _entryEnvironments.TryGetValue(entry.Id, out var env))
+        {
+            return env;
+        }
+        return Environment;
     }
 
     public List<DebugEntry> GetAll()
@@ -102,6 +124,7 @@ public class DebugEntryStore
     public void Clear()
     {
         while (_queue.TryDequeue(out _)) { }
+        _entryEnvironments.Clear();
         ExceptionGroups.Clear();
     }
 
